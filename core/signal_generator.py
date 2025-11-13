@@ -49,13 +49,27 @@ class SignalGenerator:
         result['long_exit'] = (result['close'] < result['exit_low'].shift(1))
         result['short_exit'] = (result['close'] > result['exit_high'].shift(1))
         
-        # 综合信号（1=做多，-1=做空，0=无仓位）
-        result['signal'] = 0
-        result.loc[result['long_entry'], 'signal'] = 1
-        result.loc[result['short_entry'], 'signal'] = -1
-        result.loc[result['long_exit'], 'signal'] = 0
-        result.loc[result['short_exit'], 'signal'] = 0
+        # 综合信号（1=做多，-1=做空，0=无仓位）- 使用状态机逻辑
+        signals = np.zeros(len(result), dtype=int)
         
+        # 逐行处理，维护持仓状态
+        current_position = 0
+        for i in range(len(result)):
+            # 检查入场信号
+            if result['long_entry'].iloc[i]:
+                current_position = 1
+            elif result['short_entry'].iloc[i]:
+                current_position = -1
+            
+            # 检查出场信号
+            if current_position == 1 and result['long_exit'].iloc[i]:
+                current_position = 0
+            elif current_position == -1 and result['short_exit'].iloc[i]:
+                current_position = 0
+            
+            signals[i] = current_position
+        
+        result['signal'] = signals
         return result
     
     def generate_ma_cross_signals(self, df: pd.DataFrame) -> pd.DataFrame:

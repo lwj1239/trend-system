@@ -31,15 +31,64 @@ class DataLoader:
         Returns:
             包含OHLCV数据的DataFrame
         """
-        file_path = self.data_dir / f"{symbol.lower()}.csv"
+        # 尝试多种文件路径和命名格式
+        symbol_upper = symbol.upper()
+        symbol_lower = symbol.lower()
         
-        if not file_path.exists():
-            raise FileNotFoundError(f"数据文件不存在: {file_path}")
+        # 构建可能的文件路径列表（按优先级）
+        possible_paths = [
+            # 1. 子目录 + 标准格式: data/1d/BTC_USDT_1d.csv
+            self.data_dir / self.interval / f"{symbol_upper}_{self.quote}_{self.interval}.csv",
+            # 2. 子目录 + 简化格式: data/1d/BTC.csv
+            self.data_dir / self.interval / f"{symbol_upper}.csv",
+            # 3. 子目录 + 小写: data/1d/btc.csv
+            self.data_dir / self.interval / f"{symbol_lower}.csv",
+            # 4. 主目录 + 简化格式（向后兼容）: data/BTC.csv
+            self.data_dir / f"{symbol_upper}.csv",
+            # 5. 主目录 + 小写（向后兼容）: data/btc.csv
+            self.data_dir / f"{symbol_lower}.csv",
+        ]
         
-        df = pd.read_csv(file_path, parse_dates=['timestamp'])
-        df.set_index('timestamp', inplace=True)
+        # 尝试查找文件
+        file_path = None
+        for path in possible_paths:
+            if path.exists():
+                file_path = path
+                break
         
-        # 确保列名标准化
+        if file_path is None:
+            # 优化错误提示
+            error_msg = f"数据文件不存在: {symbol}\n"
+            error_msg += f"已尝试以下路径:\n"
+            for path in possible_paths[:3]:  # 只显示主要路径
+                error_msg += f"  - {path}\n"
+            error_msg += f"建议: 请确保数据文件存放在 data/{self.interval}/ 目录下"
+            raise FileNotFoundError(error_msg)
+        
+        # 读取CSV文件，尝试多种日期列名
+        try:
+            df = pd.read_csv(file_path)
+        except Exception as e:
+            raise ValueError(f"读取文件失败 {file_path}: {e}")
+        
+        # 标准化列名（转换为小写）
+        df.columns = df.columns.str.lower()
+        
+        # 处理日期列（可能是 'date' 或 'timestamp'）
+        date_col = None
+        if 'date' in df.columns:
+            date_col = 'date'
+        elif 'timestamp' in df.columns:
+            date_col = 'timestamp'
+        else:
+            raise ValueError(f"找不到日期列（需要 'date' 或 'timestamp'）")
+        
+        # 转换日期并设置为索引
+        df[date_col] = pd.to_datetime(df[date_col])
+        df.set_index(date_col, inplace=True)
+        df.index.name = 'timestamp'
+        
+        # 确保必需列存在
         required_cols = ['open', 'high', 'low', 'close', 'volume']
         for col in required_cols:
             if col not in df.columns:

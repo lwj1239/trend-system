@@ -7,6 +7,25 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from typing import Dict, List
 import os
+import platform
+
+
+# 设置中文字体
+def setup_chinese_font():
+    """配置支持中文的字体"""
+    system = platform.system()
+    if system == 'Windows':
+        plt.rcParams['font.sans-serif'] = ['Microsoft YaHei', 'SimHei', 'SimSun']
+    elif system == 'Darwin':  # macOS
+        plt.rcParams['font.sans-serif'] = ['Arial Unicode MS', 'PingFang SC', 'STHeiti']
+    else:  # Linux
+        plt.rcParams['font.sans-serif'] = ['WenQuanYi Micro Hei', 'Droid Sans Fallback']
+    
+    plt.rcParams['axes.unicode_minus'] = False  # 解决负号显示问题
+
+
+# 初始化字体设置
+setup_chinese_font()
 
 
 class Visualizer:
@@ -20,6 +39,9 @@ class Visualizer:
         # 设置样式
         plt.style.use('seaborn-v0_8-darkgrid')
         sns.set_palette("husl")
+        
+        # 确保中文字体生效(样式设置后重新配置)
+        setup_chinese_font()
     
     def plot_equity_curve(
         self,

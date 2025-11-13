@@ -27,16 +27,16 @@ trend_detection:
 
 # 海龟系统信号参数
 signal:
-  entry_period: 20  # 突破周期（海龟1号）
-  exit_period: 10   # 退出周期
+  entry_period: 55  # 突破周期（海龟1号）
+  exit_period: 18   # 退出周期
   fast_ma: 20       # 快速均线
   slow_ma: 50       # 慢速均线
   signal_type: breakout  # breakout 或 ma_cross
 
 # 仓位管理参数
 position_sizing:
-  risk_per_trade: 0.01  # 单次交易风险（账户的1%）
-  atr_multiplier: 2.0   # ATR止损倍数
+  risk_per_trade: 0.02  # 单次交易风险（账户的1%）
+  atr_multiplier: 2.39   # ATR止损倍数
   max_position: 0.25     # 单币最大仓位
   volatility_target: 0.20  # 年化波动率目标（20%）
 
@@ -72,7 +72,7 @@ optimization:
 # 回测配置
 backtest:
   initial_capital: 100000  # 初始资金（USD）
-  commission: 0.001  # 手续费率（0.1%）
+  commission: 0.00075  # 手续费率（0.1%）
   slippage: 0.0005   # 滑点（0.05%）
   start_date: 2020-01-01
   end_date: 2024-12-31

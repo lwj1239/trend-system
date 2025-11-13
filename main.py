@@ -5,6 +5,7 @@
 import argparse
 from pathlib import Path
 import sys
+import numpy as np
 
 # 添加项目根目录到路径
 sys.path.append(str(Path(__file__).parent))
@@ -186,8 +187,154 @@ def run_parameter_optimization():
     print("参数优化模式")
     print("="*60)
     
-    print("参数优化功能需要更多数据和时间")
-    print("请参考 optimization/ 模块中的示例")
+    # 加载数据
+    loader = DataLoader()
+    data_dict = loader.load_all_assets()
+    
+    if not data_dict:
+        print("❌ 没有可用数据")
+        return
+    
+    # 选择优化资产（使用第一个可用资产）
+    symbol = list(data_dict.keys())[0]
+    df = data_dict[symbol]
+    print(f"\n使用资产: {symbol}")
+    print(f"数据范围: {df.index[0]} 到 {df.index[-1]}")
+    print(f"数据量: {len(df)} 条记录")
+    
+    # 定义目标函数
+    def objective_function(params):
+        """
+        目标函数：根据参数运行回测并返回夏普比率
+        """
+        try:
+            # 生成信号 - 手动设置参数
+            signal_gen = SignalGenerator()
+            # 临时修改配置
+            signal_gen.signal_config['entry_period'] = int(params.get('entry_period', 55))
+            signal_gen.signal_config['exit_period'] = int(params.get('exit_period', 18))
+            
+            signals_df = signal_gen.generate_signals(df)
+            signals_df = signal_gen.calculate_position_changes(signals_df)
+            
+            # 回测
+            backtester = Backtester()
+            equity_df = backtester.run_backtest(
+                {symbol: df},
+                {symbol: signals_df}
+            )
+            
+            # 计算夏普比率
+            returns = equity_df['portfolio_value'].pct_change().dropna()
+            if len(returns) < 2 or returns.std() == 0:
+                return -999
+            
+            sharpe = returns.mean() / returns.std() * np.sqrt(252)
+            return sharpe
+        except Exception as e:
+            print(f"  参数 {params} 评估失败: {e}")
+            return -999
+    
+    # 初始化优化器
+    optimizer = ParameterOptimizer()
+    
+    # 定义参数空间
+    print("\n" + "="*60)
+    print("参数优化设置")
+    print("="*60)
+    print("优化方法: 网格搜索 (快速)")
+    print("优化目标: 夏普比率")
+    
+    # 使用网格搜索（计算量较小）
+    param_grid = {
+        'entry_period': [20, 30, 40, 55],
+        'exit_period': [10, 15, 20]
+    }
+    
+    print("\n参数空间:")
+    for param, values in param_grid.items():
+        print(f"  {param}: {values}")
+    
+    total_combinations = np.prod([len(v) for v in param_grid.values()])
+    print(f"\n总组合数: {total_combinations}")
+    print("\n开始优化...\n")
+    
+    # 执行优化
+    best_params, best_score, all_results = optimizer.grid_search(
+        objective_func=objective_function,
+        param_grid=param_grid,
+        verbose=True
+    )
+    
+    # 打印结果
+    print("\n" + "="*60)
+    print("优化结果")
+    print("="*60)
+    print(f"最优夏普比率: {best_score:.4f}")
+    print(f"最优参数:")
+    for param, value in best_params.items():
+        print(f"  {param}: {value}")
+    
+    # 显示前5个结果
+    print("\n前5个最佳参数组合:")
+    sorted_results = sorted(all_results, key=lambda x: x['score'], reverse=True)
+    for i, result in enumerate(sorted_results[:5], 1):
+        print(f"\n{i}. 夏普比率: {result['score']:.4f}")
+        print(f"   参数: {result['params']}")
+    
+    # 使用最优参数运行完整回测
+    print("\n" + "="*60)
+    print("使用最优参数运行完整回测")
+    print("="*60)
+    
+    signal_gen = SignalGenerator()
+    signal_gen.signal_config['entry_period'] = int(best_params['entry_period'])
+    signal_gen.signal_config['exit_period'] = int(best_params['exit_period'])
+    signals_df = signal_gen.generate_signals(df)
+    signals_df = signal_gen.calculate_position_changes(signals_df)
+    
+    backtester = Backtester()
+    equity_df = backtester.run_backtest(
+        {symbol: df},
+        {symbol: signals_df}
+    )
+    
+    trades_df = backtester.get_trades_df()
+    metrics = PerformanceMetrics.calculate_all_metrics(
+        equity_df['portfolio_value'],
+        trades_df
+    )
+    
+    PerformanceMetrics.print_metrics(metrics)
+    
+    # 可视化
+    vis = Visualizer()
+    vis.plot_equity_curve(
+        equity_df['portfolio_value'],
+        title=f"{symbol} 优化后权益曲线 (Entry={best_params['entry_period']}, Exit={best_params['exit_period']})"
+    )
+    
+    # 创建参数热力图
+    if len(param_grid) == 2:
+        param_names = list(param_grid.keys())
+        heatmap_data = optimizer.create_heatmap_data(
+            all_results,
+            param_names[0],
+            param_names[1]
+        )
+        
+        import matplotlib.pyplot as plt
+        import seaborn as sns
+        
+        plt.figure(figsize=(10, 8))
+        sns.heatmap(heatmap_data, annot=True, fmt='.3f', cmap='RdYlGn', center=0)
+        plt.title(f'{symbol} 参数优化热力图 (夏普比率)')
+        plt.xlabel(param_names[0])
+        plt.ylabel(param_names[1])
+        plt.tight_layout()
+        plt.savefig('reports/figures/parameter_heatmap.png', dpi=150, bbox_inches='tight')
+        print(f"\n参数热力图已保存至: reports/figures/parameter_heatmap.png")
+        plt.close()
 
 
 def main():
