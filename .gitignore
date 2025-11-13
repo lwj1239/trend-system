@@ -1,0 +1,44 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+dist/
+build/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+*.ipynb_checkpoints/
+
+# 数据文件
+data/*.csv
+!data/.gitkeep
+
+# 报告输出
+reports/*.html
+reports/*.pdf
+reports/figures/*.png
+!reports/.gitkeep
+
+# 配置文件（包含敏感信息）
+config/credentials.yaml
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# 系统文件
+.DS_Store
+Thumbs.db
+
+# 日志
+*.log
+
+# 环境
+venv/
+env/
+.env

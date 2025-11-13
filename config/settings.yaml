@@ -1,0 +1,85 @@
+# 全局配置文件 - 趋势跟踪系统
+
+# 资产池配置
+assets:
+  symbols:
+    - BTC
+    - ETH
+    - BNB
+    - SOL
+  quote_currency: USDT
+
+# 数据配置
+data:
+  interval: 1d  # K线周期：1d, 4h, 1h
+  lookback_days: 730  # 历史数据天数（2年）
+  source: binance  # 数据源
+
+# 趋势识别参数
+trend_detection:
+  atr_period: 14
+  adx_period: 14
+  adx_threshold: 25  # ADX阈值判断趋势强度
+  hurst_window: 100  # Hurst指数计算窗口
+  hurst_threshold: 0.5  # Hurst > 0.5 表示趋势性
+  er_period: 10  # 效率比率周期
+  trend_score_threshold: 0.6  # 综合趋势得分阈值
+
+# 海龟系统信号参数
+signal:
+  entry_period: 20  # 突破周期（海龟1号）
+  exit_period: 10   # 退出周期
+  fast_ma: 20       # 快速均线
+  slow_ma: 50       # 慢速均线
+  signal_type: breakout  # breakout 或 ma_cross
+
+# 仓位管理参数
+position_sizing:
+  risk_per_trade: 0.01  # 单次交易风险（账户的1%）
+  atr_multiplier: 2.0   # ATR止损倍数
+  max_position: 0.25     # 单币最大仓位
+  volatility_target: 0.20  # 年化波动率目标（20%）
+
+# 组合配置
+portfolio:
+  allocation_method: risk_parity  # risk_parity 或 trend_weighted
+  max_assets: 5  # 最大持仓币种数
+  rebalance_period: 7  # 再平衡周期（天）
+  correlation_threshold: 0.7  # 相关性阈值（剔除高相关资产）
+
+# 风险管理
+risk_management:
+  max_drawdown: 0.20  # 最大回撤限制（20%）
+  max_exposure: 1.0   # 最大总仓位
+  stop_loss_atr: 2.0  # 止损ATR倍数
+  take_profit_atr: 6.0  # 止盈ATR倍数
+  trailing_stop: true  # 是否使用跟踪止损
+
+# 参数优化配置
+optimization:
+  method: bayesian  # bayesian, grid, genetic
+  n_trials: 100  # 优化试验次数
+  cv_folds: 5    # 交叉验证折数
+  objective: sharpe_ratio  # 优化目标：sharpe_ratio, calmar_ratio, sortino_ratio
+  
+  # 参数搜索空间
+  search_space:
+    entry_period: [10, 20, 30, 40, 50]
+    exit_period: [5, 10, 15, 20]
+    atr_multiplier: [1.5, 2.0, 2.5, 3.0]
+    adx_threshold: [20, 25, 30, 35]
+
+# 回测配置
+backtest:
+  initial_capital: 100000  # 初始资金（USD）
+  commission: 0.001  # 手续费率（0.1%）
+  slippage: 0.0005   # 滑点（0.05%）
+  start_date: 2020-01-01
+  end_date: 2024-12-31
+
+# 报告配置
+reporting:
+  output_dir: ./reports
+  format: html  # html 或 pdf
+  include_charts: true
+  save_trades: true
